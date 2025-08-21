@@ -149,7 +149,7 @@ export default async function OrganizationsPage({
                             💡 Tip:
                           </span>
                           <span>
-                            Use the "Add" button above to create your first organization
+                            Use the &quot;Add&quot; button above to create your first organization
                           </span>
                         </div>
                       </div>
@@ -174,7 +174,7 @@ export default async function OrganizationsPage({
             <div className="flex items-center justify-between text-sm text-gray-700">
               <div>
                 Showing {rows.length ? `${from + 1}–${from + rows.length}` : 0} of{" "}
-                {total.toLocaleString()} entries
+                            {total.toLocaleString()} entries
               </div>
               <Pagination baseHref={LIST_PATH} page={page} totalPages={totalPages} />
             </div>
@@ -190,9 +190,7 @@ function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-6 py-4 font-medium text-gray-900">{children}</th>;
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-6 py-4">{children}</td>;
-}
+// Removed unused Td component
 
 function Pagination({
   baseHref,

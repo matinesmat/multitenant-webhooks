@@ -1,10 +1,7 @@
-import { ReactNode } from "react";
+// Removed unused ReactNode import
 import { redirect } from "next/navigation";
 
 export default async function DashboardServerLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+}: object) {
   redirect("/select-organization");
 }
