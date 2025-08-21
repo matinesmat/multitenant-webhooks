@@ -37,10 +37,9 @@ function compactRange(page: number, total: number) {
 export default async function OrganizationsPage({
   searchParams,
 }: {
-  // 👇 Next 15: searchParams is async
   searchParams: Promise<SearchParams>;
 }) {
-  const sp = await searchParams; // 👈 IMPORTANT
+  const sp = await searchParams;
   const page = getPage(sp);
   const perPage = 8;
   const from = (page - 1) * perPage;
