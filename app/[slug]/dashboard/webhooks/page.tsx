@@ -1,24 +1,21 @@
-// app/dashboard/webhooks/page.tsx
 import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import Link from "next/link";
-import * as React from "react";
 import CrudToolbar from "@/components/CrudToolbar";
-import { 
-  createWebhookAction, 
-  updateWebhookAction, 
-  deleteWebhookAction 
-} from "./actions";
+import * as React from "react";
+import { createWebhookAction, updateWebhookAction, deleteWebhookAction } from "./actions";
+
+// If you have generated Supabase types, you can do:
+// import type { Database } from "@/types/supabase";
 
 const WEBHOOK_EVENT_OPTIONS = [
-  { value: 'student.created', label: 'Student Created' },
-  { value: 'student.updated', label: 'Student Updated' },
-  { value: 'student.deleted', label: 'Student Deleted' },
+  { value: "student.created", label: "Student Created" },
+  { value: "student.updated", label: "Student Updated" },
+  { value: "student.deleted", label: "Student Deleted" },
 ];
 
 type Webhook = {
   id: string;
-  org_id: string | null;
+  org_slug: string;
   name: string;
   url: string;
   bearer_token: string | null;
@@ -28,7 +25,7 @@ type Webhook = {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-const LIST_PATH = "/dashboard/webhooks";
+const LIST_PATH = (orgId: string) => `/${orgId}/dashboard/webhooks`;
 
 function getPage(sp: SearchParams) {
   const raw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
@@ -49,27 +46,27 @@ function compactRange(page: number, total: number) {
   return r;
 }
 
-
-
-/* ----------------------------- Page ----------------------------- */
 export default async function WebhooksPage({
+  params,
   searchParams,
 }: {
-  // Next.js 15: searchParams is async in Server Components
-  searchParams: Promise<SearchParams>;
+  params: { slug: string };
+  searchParams: SearchParams;
 }) {
-  const sp = await searchParams; // ✅ await before use
+  const sp = searchParams;
   const page = getPage(sp);
   const perPage = 8;
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
+  // If you have generated types, use: createServerComponentClient<Database>({ cookies })
   const supabase = createServerComponentClient({ cookies });
+
+  // List rows for this tenant by org_slug
   const { data, count, error } = await supabase
     .from("webhook_settings")
-    .select("id,org_id,name,url,bearer_token,json_body,event_type", {
-      count: "exact",
-    })
+    .select("id,org_slug,name,url,bearer_token,json_body,event_type", { count: "exact" })
+    .eq("org_slug", params.slug)
     .order("id")
     .range(from, to);
 
@@ -77,6 +74,20 @@ export default async function WebhooksPage({
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const errorMsg = error?.message ?? null;
+
+  // Server action wrappers bound to current org (create/update/delete)
+  async function createForOrg(fd: FormData) {
+    "use server";
+    return createWebhookAction(fd, params.slug);
+  }
+  async function updateForOrg(fd: FormData) {
+    "use server";
+    return updateWebhookAction(fd, params.slug);
+  }
+  async function deleteForOrg(fd: FormData) {
+    "use server";
+    return deleteWebhookAction(fd, params.slug);
+  }
 
   return (
     <section className="rounded-3xl bg-white p-5 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.2)]">
@@ -90,26 +101,40 @@ export default async function WebhooksPage({
           createFields={[
             { name: "name", label: "Name", required: true },
             { name: "url", label: "URL", type: "url", required: true },
-              { name: "event_type", label: "Event Type", type: 'select', options: WEBHOOK_EVENT_OPTIONS, required: true, placeholder: 'Select event type' },
-              { name: "org_id", label: "Org ID", placeholder: "uuid…", required: true },
+            {
+              name: "event_type",
+              label: "Event Type",
+              type: "select",
+              options: WEBHOOK_EVENT_OPTIONS,
+              required: true,
+              placeholder: "Select event type",
+            },
             { name: "bearer_token", label: "Bearer Token (optional)" },
-            { name: "json_body", label: "JSON Body (optional)", type: "textarea", placeholder: '{"key":"value"}' },
+            {
+              name: "json_body",
+              label: "JSON Body (optional)",
+              type: "textarea",
+              placeholder: '{"key":"value"}',
+            },
           ]}
           updateFields={[
             { name: "id", label: "ID", placeholder: "webhook id", required: true },
             { name: "name", label: "Name (optional)" },
             { name: "url", label: "URL (optional)", type: "url" },
-              { name: "event_type", label: "Event Type (optional)", type: 'select', options: WEBHOOK_EVENT_OPTIONS, placeholder: 'Select event type' },
-            { name: "org_id", label: "Org ID (optional)", placeholder: "uuid… (blank to clear)" },
+            {
+              name: "event_type",
+              label: "Event Type (optional)",
+              type: "select",
+              options: WEBHOOK_EVENT_OPTIONS,
+              placeholder: "Select event type",
+            },
             { name: "bearer_token", label: "Bearer Token (optional)" },
             { name: "json_body", label: "JSON Body (optional)", type: "textarea" },
           ]}
-          deleteFields={[
-            { name: "id", label: "ID", placeholder: "webhook id", required: true },
-          ]}
-          onCreateAction={createWebhookAction}
-          onUpdateAction={updateWebhookAction}
-          onDeleteAction={deleteWebhookAction}
+          deleteFields={[{ name: "id", label: "ID", placeholder: "webhook id", required: true }]}
+          onCreateAction={createForOrg}
+          onUpdateAction={updateForOrg}
+          onDeleteAction={deleteForOrg} // <- scope delete to this org
         />
       </div>
 
@@ -124,7 +149,6 @@ export default async function WebhooksPage({
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <Th>ID</Th>
-              <Th>Org ID</Th>
               <Th>Name</Th>
               <Th>URL</Th>
               <Th>Bearer Token</Th>
@@ -135,7 +159,7 @@ export default async function WebhooksPage({
           <tbody className="divide-y">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-400">
+                <td colSpan={6} className="p-6 text-center text-gray-400">
                   No data yet
                 </td>
               </tr>
@@ -143,7 +167,6 @@ export default async function WebhooksPage({
             {rows.map((w) => (
               <tr key={w.id} className="align-top hover:bg-gray-50/60">
                 <Td>{w.id}</Td>
-                <Td>{w.org_id ?? "—"}</Td>
                 <Td>{w.name}</Td>
                 <Td className="max-w-[260px] truncate" title={w.url}>
                   {w.url}
@@ -162,17 +185,13 @@ export default async function WebhooksPage({
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-        <div>
-          Showing {rows.length ? `${from + 1}–${from + rows.length}` : 0} of {total.toLocaleString()} entries
-        </div>
-        <Pagination baseHref={LIST_PATH} page={page} totalPages={totalPages} />
+        <div>Showing {rows.length ? `${from + 1}–${from + rows.length}` : 0} of {total.toLocaleString()} entries</div>
+        <Pagination baseHref={LIST_PATH(params.slug)} page={page} totalPages={totalPages} />
       </div>
     </section>
   );
 }
 
-/* ----------------------------- UI bits ----------------------------- */
-// Accept standard <th> attributes (className, title, etc.)
 function Th({
   children,
   ...rest
@@ -184,7 +203,6 @@ function Th({
   );
 }
 
-// Accept standard <td> attributes (className, title, etc.)
 function Td({
   children,
   ...rest
@@ -209,40 +227,38 @@ function Pagination({
   const link = (p: number) => `${baseHref}?page=${p}`;
   return (
     <div className="flex items-center gap-1">
-      <Link
+      <a
         className="h-8 rounded-md border bg-white px-3 text-sm hover:bg-gray-50"
         href={link(Math.max(1, page - 1))}
         aria-label="Previous page"
       >
         &lt;
-      </Link>
+      </a>
       {nums.map((n, i) =>
         n === "…" ? (
           <span key={`e${i}`} className="px-2 text-gray-400">
             …
           </span>
         ) : (
-          <Link
+          <a
             key={n}
             href={link(n)}
             className={`h-8 rounded-md px-3 text-sm ${
-              n === page
-                ? "bg-[#5A54F9] text-white"
-                : "border bg-white text-gray-700 hover:bg-gray-50"
+              n === page ? "bg-[#5A54F9] text-white" : "border bg-white text-gray-700 hover:bg-gray-50"
             }`}
             aria-current={n === page ? "page" : undefined}
           >
             {n}
-          </Link>
+          </a>
         )
       )}
-      <Link
+      <a
         className="h-8 rounded-md border bg-white px-3 text-sm hover:bg-gray-50"
         href={link(Math.min(totalPages, page + 1))}
         aria-label="Next page"
       >
         &gt;
-      </Link>
+      </a>
     </div>
   );
 }
