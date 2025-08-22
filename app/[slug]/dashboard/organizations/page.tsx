@@ -38,7 +38,7 @@ export default async function OrganizationsPage({
 	params,
 	searchParams,
 }: {
-	params: { slug: string };
+	params?: { slug?: string };
 	searchParams: Promise<SearchParams>;
 }) {
 	const sp = await searchParams; // 👈 IMPORTANT
@@ -69,7 +69,7 @@ export default async function OrganizationsPage({
 							<p className="mt-2 text-gray-600">Manage your organizations and their settings</p>
 						</div>
 						<Link 
-							href={`/${params.slug}/dashboard`} 
+							href={`/${params?.slug ?? ""}/dashboard`} 
 							className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2"
 						>
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@ export default async function OrganizationsPage({
 									Showing {rows.length ? `${from + 1}–${from + rows.length}` : 0} of{" "}
 									{total.toLocaleString()} entries
 								</div>
-								<Pagination baseHref={LIST_PATH(params.slug)} page={page} totalPages={totalPages} />
+								<Pagination baseHref={LIST_PATH(params?.slug ?? "")} page={page} totalPages={totalPages} />
 							</div>
 						</div>
 					)}
