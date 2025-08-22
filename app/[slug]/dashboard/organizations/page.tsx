@@ -39,9 +39,9 @@ export default async function OrganizationsPage({
 	searchParams,
 }: {
 	params?: { slug?: string };
-	searchParams: SearchParams;
+	searchParams: Promise<SearchParams>;
 }) {
-	const sp = searchParams;
+	const sp = await searchParams; // 👈 IMPORTANT
 	const page = getPage(sp);
 	const perPage = 8;
 	const from = (page - 1) * perPage;
@@ -75,9 +75,6 @@ export default async function OrganizationsPage({
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
 							</svg>
-							Back to Dashboard
-						</Link>
-					</div>
 				</div>
 
 				<div className="bg-white rounded-xl shadow-sm border">
@@ -157,19 +154,21 @@ export default async function OrganizationsPage({
 									</tr>
 								)}
 								{rows.map((org) => (
-									<tr key={org.id} className="hover:bg-gray-50/60 transition-colors">
-										<Td>
-											<div className="font-medium text-gray-900">{org.name}</div>
-										</Td>
-										<Td>
-											<code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">
-												{org.id}
-											</code>
-										</Td>
-										<Td>
-											{org.owner_id ? (
-												<code className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-600 font-mono">
-													{org.owner_id}
+										if (n === "…") {
+											return <span key={`e${i}`} className="px-2 text-gray-400">…</span>;
+										} else {
+											return (
+												<Link
+													key={n}
+													href={link(n)}
+													className={`h-8 rounded-md px-3 text-sm transition-colors ${n === page ? "bg-blue-600 text-white border-blue-600" : "border bg-white text-gray-700 hover:bg-gray-50"}`}
+													aria-current={n === page ? "page" : undefined}
+												>
+													{n}
+												</Link>
+											);
+										}
+									})}
 												</code>
 											) : (
 												<span className="text-gray-400">—</span>
@@ -224,23 +223,17 @@ export default async function OrganizationsPage({
 }
 
 /* ----------------------------- UI bits ----------------------------- */
-function Th({ children }: { children: React.ReactNode }) {
-	return <th className="px-6 py-4 font-medium text-gray-900">{children}</th>;
+function Th(props: { children: React.ReactNode }) {
+	return <th className="px-6 py-4 font-medium text-gray-900">{props.children}</th>;
 }
 
-function Td({ children }: { children: React.ReactNode }) {
-	return <td className="px-6 py-4">{children}</td>;
+function Td(props: { children: React.ReactNode }) {
+	return <td className="px-6 py-4">{props.children}</td>;
 }
 
-function Pagination({
-	baseHref,
-	page,
-	totalPages,
-}: {
-	baseHref: string;
-	page: number;
-	totalPages: number;
-}) {
+type PaginationProps = { baseHref: string; page: number; totalPages: number };
+function Pagination(props: PaginationProps) {
+	const { baseHref, page, totalPages } = props;
 	const nums = compactRange(page, totalPages);
 	const link = (p: number) => `${baseHref}?page=${p}`;
 	return (
@@ -251,21 +244,16 @@ function Pagination({
 				aria-label="Previous page"
 			>
 				&lt;
-			</Link>
-			{nums.map((n, i) =>
-				n === "…" ? (
-					<span key={`e${i}`} className="px-2 text-gray-400">
-						…
-					</span>
-				) : (
-					<Link
-						key={n}
-						href={link(n)}
-						className={`h-8 rounded-md px-3 text-sm transition-colors ${
-							n === page
-								? "bg-blue-600 text-white border-blue-600"
-								: "border bg-white text-gray-700 hover:bg-gray-50"
-						}`}
+						<Link 
+							href={`/${(params && params.slug) ? params.slug : ""}/dashboard`} 
+							className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2"
+						>
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+							</svg>
+							Back to Dashboard
+						</Link>
+						className={`h-8 rounded-md px-3 text-sm transition-colors ${n === page ? "bg-blue-600 text-white border-blue-600" : "border bg-white text-gray-700 hover:bg-gray-50"}`}
 						aria-current={n === page ? "page" : undefined}
 					>
 						{n}

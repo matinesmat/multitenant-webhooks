@@ -2,12 +2,13 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default async function OrgScopedDashboard({ params }: { params: { slug: string } }) {
-	const supabase = createServerComponentClient({ cookies });
+export default async function OrgScopedDashboard(props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
+    const supabase = createServerComponentClient({ cookies });
 
-	const { data: { session } } = await supabase.auth.getSession();
-	let userName = "User";
-	if (session?.user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    let userName = "User";
+    if (session?.user) {
 		const { data: profile } = await supabase
 			.from('profiles')
 			.select('full_name')
@@ -18,9 +19,9 @@ export default async function OrgScopedDashboard({ params }: { params: { slug: s
 		else if (session.user.email) userName = session.user.email.split('@')[0];
 	}
 
-	const base = `/${params.slug}/dashboard`;
+    const base = `/${params.slug}/dashboard`;
 
-	return (
+    return (
 		<div className="min-h-screen bg-gray-50">
 			<div className="bg-white shadow-sm border-b">
 				<div className="mx-auto max-w-7xl px-8 py-6">
