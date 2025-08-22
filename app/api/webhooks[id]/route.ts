@@ -25,8 +25,8 @@ function err(status: number, message: string, details?: unknown) {
 }
 
 // GET /api/webhooks/:id
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return err(401, 'Unauthorized');
@@ -42,8 +42,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 // PATCH /api/webhooks/:id
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return err(401, 'Unauthorized');
@@ -66,8 +66,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 // DELETE /api/webhooks/:id
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return err(401, 'Unauthorized');
