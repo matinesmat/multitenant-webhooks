@@ -56,7 +56,7 @@ export default async function WebhooksPage({
   searchParams,
 }: {
   // Next.js 15: searchParams is async in Server Components
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams; // ✅ await before use
   const page = getPage(sp);

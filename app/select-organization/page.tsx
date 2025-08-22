@@ -6,7 +6,7 @@ import { createOrganizationFromForm } from "./actions";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function SelectOrganizationPage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function SelectOrganizationPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
 	const supabase = createServerComponentClient({ cookies });
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) redirect("/login");

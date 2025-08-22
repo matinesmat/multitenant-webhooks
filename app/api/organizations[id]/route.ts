@@ -15,7 +15,7 @@ function err(status: number, message: string, details?: unknown) {
 }
 
 // GET /api/organizations/:id
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
@@ -32,7 +32,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 // PATCH /api/organizations/:id
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
@@ -55,7 +55,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // DELETE /api/organizations/:id
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();

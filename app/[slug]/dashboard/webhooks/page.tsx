@@ -46,14 +46,13 @@ function compactRange(page: number, total: number) {
   return r;
 }
 
-export default async function WebhooksPage(
-  props: {
-    params: Promise<{ slug: string }>;
-    searchParams: Promise<SearchParams>;
-  }
-) {
-  const searchParams = await props.searchParams;
-  const params = await props.params;
+export default async function WebhooksPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: SearchParams;
+}) {
   const sp = searchParams;
   const page = getPage(sp);
   const perPage = 8;

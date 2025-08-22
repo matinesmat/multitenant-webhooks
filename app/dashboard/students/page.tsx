@@ -39,7 +39,7 @@ function compactRange(page: number, total: number) {
 }
 
 /* ----------------------------- Page ----------------------------- */
-export default async function StudentsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function StudentsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams;
   const page = getPage(sp);
   const perPage = 8;

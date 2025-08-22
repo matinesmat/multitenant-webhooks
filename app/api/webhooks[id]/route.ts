@@ -25,8 +25,7 @@ function err(status: number, message: string, details?: unknown) {
 }
 
 // GET /api/webhooks/:id
-export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
@@ -43,8 +42,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
 }
 
 // PATCH /api/webhooks/:id
-export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
@@ -68,8 +66,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 }
 
 // DELETE /api/webhooks/:id
-export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const supabase = await supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();

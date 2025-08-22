@@ -38,7 +38,7 @@ export default async function OrganizationsPage({
 	params,
 	searchParams,
 }: {
-	params?: { slug?: string };
+	params: { slug: string };
 	searchParams: Promise<SearchParams>;
 }) {
 	const sp = await searchParams; // 👈 IMPORTANT

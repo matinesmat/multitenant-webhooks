@@ -33,7 +33,7 @@ function compactRange(page: number, total: number) {
 	return r;
 }
 
-export default async function StudentsPage({ params, searchParams }: { params: { slug: string }, searchParams: SearchParams }) {
+export default async function StudentsPage({ params, searchParams }: { params: Promise<{ slug: string }>, searchParams: Promise<SearchParams> }) {
 	const { slug } = await params;
 	const supabase = createServerComponentClient({ cookies });
 	const { data: org, error: orgError } = await supabase
