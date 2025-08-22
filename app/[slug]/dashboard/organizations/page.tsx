@@ -39,9 +39,9 @@ export default async function OrganizationsPage({
 	searchParams,
 }: {
 	params?: { slug?: string };
-	searchParams: Promise<SearchParams>;
+	searchParams: SearchParams;
 }) {
-	const sp = await searchParams; // 👈 IMPORTANT
+	const sp = searchParams;
 	const page = getPage(sp);
 	const perPage = 8;
 	const from = (page - 1) * perPage;
