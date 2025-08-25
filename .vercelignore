@@ -1,0 +1,4 @@
+# Ignore linter config and results for Vercel deployment
+.eslintrc.js
+.eslintignore
+.next/eslintcache
