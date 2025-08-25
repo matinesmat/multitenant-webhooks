@@ -8,6 +8,9 @@ import PasswordInput from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const router = useRouter()
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables!');
+  }
   const supabase = createPagesBrowserClient()
 
   const [form, setForm] = useState({ email: '', password: '' })
