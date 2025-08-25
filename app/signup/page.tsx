@@ -3,12 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import PasswordInput from '@/components/PasswordInput'
 
 export default function SignupPage() {
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
+  const supabase = createPagesBrowserClient()
 
   const [form, setForm] = useState({
     name: '',
