@@ -7,7 +7,8 @@ import { createOrganizationFromForm } from "./actions";
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function SelectOrganizationPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-	const supabase = createServerComponentClient({ cookies });
+	const cookieStore = await cookies();
+	const supabase = createServerComponentClient({ cookies: () => cookieStore });
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) redirect("/login");
 
@@ -40,7 +41,7 @@ export default async function SelectOrganizationPage({ searchParams }: { searchP
 				{organizations.map((o) => (
 					<Link
 						key={o.slug || o.id} // Use slug if available, fallback to id
-						href={`/${o.slug}/dashboard/students`}
+						href={`/${o.slug}/dashboard`}
 						className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200 hover:shadow-md"
 					>
 						<div className="grid h-10 w-10 place-items-center rounded-full bg-gray-100 text-gray-400">●</div>

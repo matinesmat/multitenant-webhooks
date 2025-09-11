@@ -1,13 +1,37 @@
 // lib/supabase/server.ts
 import { cookies } from 'next/headers';
-import {
-  createServerComponentClient,
-  createServerActionClient,
-} from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
+import type { CookieOptions } from '@supabase/ssr';
 
-export const supabaseServer = () =>
-  createServerComponentClient<Database>({ cookies });
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
+  
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  );
+}
 
-export const supabaseAction = () =>
-  createServerActionClient<Database>({ cookies });
+// For server actions (if needed)
+export async function createServerActionSupabaseClient() {
+  return createServerSupabaseClient();
+}

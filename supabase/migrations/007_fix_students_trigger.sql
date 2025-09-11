@@ -1,0 +1,2 @@
+-- Database triggers removed - webhooks handled at application level
+-- This migration is now empty as webhooks are handled in Next.js actions

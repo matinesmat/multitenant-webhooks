@@ -64,7 +64,8 @@ export default async function WebhooksPage({
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
   const { data, count, error } = await supabase
     .from("webhook_settings")
     .select("id,org_id,name,url,bearer_token,json_body,event_type", {

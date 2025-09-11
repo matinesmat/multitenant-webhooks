@@ -45,7 +45,7 @@ export default function SignupPage() {
     if (signupError) {
       setError(signupError.message)
     } else {
-      router.push('/dashboard')
+      router.push('/select-organization')
     }
   }
 

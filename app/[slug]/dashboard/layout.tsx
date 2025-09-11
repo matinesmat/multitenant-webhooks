@@ -8,7 +8,8 @@ export default async function OrgDashboardLayout({
 }: {
 	children: ReactNode;
 }) {
-	const supabase = createServerComponentClient({ cookies });
+	const cookieStore = await cookies();
+	const supabase = createServerComponentClient({ cookies: () => cookieStore });
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
@@ -17,13 +18,7 @@ export default async function OrgDashboardLayout({
 		return null;
 	}
 
-	const userName =
-		(user?.user_metadata?.full_name as string | undefined)?.trim() ||
-		(user?.user_metadata?.name as string | undefined)?.trim() ||
-		user?.email ||
-		"User";
-
-	return <DashboardShell userName={userName}>{children}</DashboardShell>;
+	return <DashboardShell>{children}</DashboardShell>;
 }
 
 

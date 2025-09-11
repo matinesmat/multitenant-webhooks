@@ -60,7 +60,8 @@ export default async function WebhooksPage({
   const to = from + perPage - 1;
 
   // If you have generated types, use: createServerComponentClient<Database>({ cookies })
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   // List rows for this tenant by org_slug
   const { data, count, error } = await supabase

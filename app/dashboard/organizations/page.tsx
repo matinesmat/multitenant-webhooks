@@ -9,7 +9,14 @@ import {
   deleteOrganizationAction 
 } from "./actions";
 
-type Org = { slug: string; name: string; owner_id: string | null }; // Use slug instead of id
+type Org = { 
+  id: string; 
+  slug: string; 
+  name: string; 
+  owner_id: string | null; 
+  owner_email: string | null;
+  created_at?: string;
+};
 type SearchParams = Record<string, string | string[] | undefined>;
 
 const LIST_PATH = "/dashboard/organizations";
@@ -45,11 +52,12 @@ export default async function OrganizationsPage({
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
   const { data, count, error } = await supabase
     .from("organizations")
-    .select("slug,name,owner_id", { count: "exact" }) // Use slug
-    .order("slug") // Order by slug
+    .select("id,slug,name,owner_id,owner_email,created_at", { count: "exact" })
+    .order("created_at", { ascending: false })
     .range(from, to);
 
   const rows = (data ?? []) as Org[];
@@ -129,14 +137,15 @@ export default async function OrganizationsPage({
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
                   <Th>Organization Name</Th>
-                  <Th>Slug</Th> {/* Display slug */}
-                  <Th>Owner ID</Th>
+                  <Th>Slug</Th>
+                  <Th>Owner</Th>
+                  <Th>Created</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="p-12 text-center text-gray-400">
+                    <td colSpan={4} className="p-12 text-center text-gray-400">
                       <div className="flex flex-col items-center">
                         <svg className="h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -156,10 +165,13 @@ export default async function OrganizationsPage({
                   </tr>
                 )}
                 {rows.map((org) => (
-                  <tr key={org.slug}> {/* Use slug as key */}
+                  <tr key={org.id}>
                     <td className="p-4 text-gray-900">{org.name}</td>
-                    <td className="p-4 text-gray-500">{org.slug}</td> {/* Display slug */}
-                    <td className="p-4 text-gray-500">{org.owner_id}</td>
+                    <td className="p-4 text-gray-500">{org.slug}</td>
+                    <td className="p-4 text-gray-500">{org.owner_email || 'No email'}</td>
+                    <td className="p-4 text-gray-500">
+                      {org.created_at ? new Date(org.created_at).toLocaleDateString() : 'Recently'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

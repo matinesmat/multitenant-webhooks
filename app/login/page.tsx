@@ -31,7 +31,7 @@ export default function LoginPage() {
     if (loginError) {
       setError('Invalid login credentials')
     } else {
-      router.push('/dashboard')
+      router.push('/select-organization')
     }
   }
 

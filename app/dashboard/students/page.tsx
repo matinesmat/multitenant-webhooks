@@ -1,8 +1,7 @@
 // app/dashboard/students/page.tsx
-import { cookies } from "next/headers";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import Link from "next/link";
 import CrudToolbar from "@/components/CrudToolbar";
+import { createServerSupabaseClient } from "@/lib/supabase";
 import { 
   createStudentAction, 
   updateStudentAction, 
@@ -46,7 +45,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createServerSupabaseClient();
   
   // Fetch students
   const { data, count, error } = await supabase

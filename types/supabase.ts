@@ -7,36 +7,154 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allow\ to automatically instantiate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
-      applications: {
+      agencies: {
         Row: {
-          created_at: string | null
+          created_at: string
+          email: string | null
           id: string
+          metadata: Json
+          name: string
           org_id: string
-          status: string
-          student_id: string
+          phone: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
+          email?: string | null
           id?: string
+          metadata?: Json
+          name: string
+          org_id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          org_id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agencies_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_student: {
+        Row: {
+          active: boolean
+          agency_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          org_id: string
+          role: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          agency_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          org_id: string
+          role?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          agency_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          org_id?: string
+          role?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_student_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_student_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_student_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          agency_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          notes: string | null
           org_id: string
           status: string
           student_id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          org_id: string
+          status?: string
+          student_id: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          agency_id?: string
+          created_at?: string
           id?: string
+          metadata?: Json
+          notes?: string | null
           org_id?: string
           status?: string
           student_id?: string
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "applications_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "applications_org_id_fkey"
             columns: ["org_id"]
@@ -57,18 +175,21 @@ export type Database = {
         Row: {
           id: string
           name: string
+          owner_email: string | null
           owner_id: string | null
           slug: string
         }
         Insert: {
           id?: string
           name: string
+          owner_email?: string | null
           owner_id?: string | null
           slug: string
         }
         Update: {
           id?: string
           name?: string
+          owner_email?: string | null
           owner_id?: string | null
           slug?: string
         }
@@ -76,40 +197,42 @@ export type Database = {
       }
       students: {
         Row: {
-          email: string
+          created_at: string
+          email: string | null
           first_name: string
           id: string
           last_name: string
-          org_slug: string
-          organization_id: string | null
+          metadata: Json
+          org_id: string
+          status: string
+          updated_at: string
         }
         Insert: {
-          email: string
+          created_at?: string
+          email?: string | null
           first_name: string
           id?: string
           last_name: string
-          org_slug: string
-          organization_id?: string | null
+          metadata?: Json
+          org_id: string
+          status?: string
+          updated_at?: string
         }
         Update: {
-          email?: string
+          created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
           last_name?: string
-          org_slug?: string
-          organization_id?: string | null
+          metadata?: Json
+          org_id?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "students_org_id_fkey"
-            columns: ["org_slug"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "students_organization_id_fkey"
-            columns: ["organization_id"]
+            columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -118,36 +241,54 @@ export type Database = {
       }
       webhook_settings: {
         Row: {
-          bearer_token: string
-          event_type: string
+          bearer_token: string | null
+          created_at: string
+          enabled: boolean
+          event_type: string | null
+          events: string[]
           id: string
-          json_body: string
-          name: string
-          org_slug: string
+          json_body: string | null
+          name: string | null
+          org_id: string
+          org_slug: string | null
+          resources: string[]
+          updated_at: string
           url: string
         }
         Insert: {
-          bearer_token: string
-          event_type: string
+          bearer_token?: string | null
+          created_at?: string
+          enabled?: boolean
+          event_type?: string | null
+          events?: string[]
           id?: string
-          json_body: string
-          name: string
-          org_slug: string
+          json_body?: string | null
+          name?: string | null
+          org_id: string
+          org_slug?: string | null
+          resources?: string[]
+          updated_at?: string
           url: string
         }
         Update: {
-          bearer_token?: string
-          event_type?: string
+          bearer_token?: string | null
+          created_at?: string
+          enabled?: boolean
+          event_type?: string | null
+          events?: string[]
           id?: string
-          json_body?: string
-          name?: string
-          org_slug?: string
+          json_body?: string | null
+          name?: string | null
+          org_id?: string
+          org_slug?: string | null
+          resources?: string[]
+          updated_at?: string
           url?: string
         }
         Relationships: [
           {
             foreignKeyName: "webhook_settings_org_id_fkey"
-            columns: ["org_slug"]
+            columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -159,7 +300,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_org_slug: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
+      slugify: {
+        Args: { txt: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
@@ -183,7 +331,7 @@ export type Tables<
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

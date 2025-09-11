@@ -10,6 +10,7 @@ export async function createStudentAction(fd: FormData, slug?: string) {
 		const first_name = String(fd.get("first_name") ?? "").trim();
 		const last_name = String(fd.get("last_name") ?? "").trim();
 		const email = String(fd.get("email") ?? "").trim();
+		const status = String(fd.get("status") ?? "active").trim();
 		const orgId = slug || getOrganizationSlugFromHeaders();
 
 		if (!first_name || !last_name || !email || !orgId) {
@@ -31,7 +32,7 @@ export async function createStudentAction(fd: FormData, slug?: string) {
 
 		const { data, error } = await supabase
 			.from("students")
-			.insert({ first_name, last_name, email, org_id: org.id }) // Use the organization ID
+			.insert({ first_name, last_name, email, status, org_id: org.id }) // Use the organization ID
 			.select()
 			.single();
 
@@ -39,28 +40,33 @@ export async function createStudentAction(fd: FormData, slug?: string) {
 			return { success: false, error: `Failed to create student: ${error.message}` };
 		}
 
-		// Dispatch webhooks for student.created
-		const { data: webhooks } = await supabase
-			.from("webhook_settings")
-			.select("url,bearer_token,json_body,event_type")
-			.eq("org_slug", slug)
-			.eq("event_type", "student.created");
+		// Try to dispatch webhooks for student.created (optional, don't fail if webhooks don't work)
+		try {
+			const { data: webhooks } = await supabase
+				.from("webhook_settings")
+				.select("url,bearer_token,json_body,event_type")
+				.eq("org_slug", slug)
+				.eq("event_type", "student.created");
 
-		if (webhooks && Array.isArray(webhooks)) {
-			for (const webhook of webhooks) {
-				try {
-					await fetch(webhook.url, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
-						},
-						body: webhook.json_body || JSON.stringify({ event: "student.created", student: data })
-					});
-				} catch {
-					// Optionally log or handle webhook delivery errors
+			if (webhooks && Array.isArray(webhooks)) {
+				for (const webhook of webhooks) {
+					try {
+						await fetch(webhook.url, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
+							},
+							body: webhook.json_body || JSON.stringify({ event: "student.created", student: data })
+						});
+					} catch {
+						// Silently handle webhook delivery errors - don't fail student creation
+					}
 				}
 			}
+		} catch (webhookError) {
+			// Silently handle webhook system errors - student creation should still succeed
+			console.log("Webhook dispatch failed, but student was created successfully:", webhookError);
 		}
 
 		revalidatePath(`/${slug}/dashboard/students`);
@@ -78,12 +84,14 @@ export async function updateStudentAction(fd: FormData, slug?: string) {
 		const first_name = String(fd.get("first_name") ?? "").trim();
 		const last_name = String(fd.get("last_name") ?? "").trim();
 		const email = String(fd.get("email") ?? "").trim();
+		const status = String(fd.get("status") ?? "").trim();
 		const orgId = slug || getOrganizationSlugFromHeaders();
 
-		const update: { first_name?: string; last_name?: string; email?: string } = {};
+		const update: { first_name?: string; last_name?: string; email?: string; status?: string } = {};
 		if (first_name) update.first_name = first_name;
 		if (last_name) update.last_name = last_name;
 		if (email) update.email = email;
+		if (status) update.status = status;
 
 		if (Object.keys(update).length === 0) {
 			return { success: false, error: "No valid updates provided" };
@@ -102,28 +110,33 @@ export async function updateStudentAction(fd: FormData, slug?: string) {
 			return { success: false, error: `Failed to update student: ${error.message}` };
 		}
 
-		// Dispatch webhooks for student.updated
-		const { data: webhooks } = await supabase
-			.from("webhook_settings")
-			.select("url,bearer_token,json_body,event_type")
-			.eq("org_slug", slug)
-			.eq("event_type", "student.updated");
+		// Try to dispatch webhooks for student.updated (optional)
+		try {
+			const { data: webhooks } = await supabase
+				.from("webhook_settings")
+				.select("url,bearer_token,json_body,event_type")
+				.eq("org_slug", slug)
+				.eq("event_type", "student.updated");
 
-		if (webhooks && Array.isArray(webhooks)) {
-			for (const webhook of webhooks) {
-				try {
-					await fetch(webhook.url, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
-						},
-						body: webhook.json_body || JSON.stringify({ event: "student.updated", student: data })
-					});
-				} catch {
-					// Optionally log or handle webhook delivery errors
+			if (webhooks && Array.isArray(webhooks)) {
+				for (const webhook of webhooks) {
+					try {
+						await fetch(webhook.url, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
+							},
+							body: webhook.json_body || JSON.stringify({ event: "student.updated", student: data })
+						});
+					} catch {
+						// Silently handle webhook delivery errors
+					}
 				}
 			}
+		} catch (webhookError) {
+			// Silently handle webhook system errors
+			console.log("Webhook dispatch failed for update, but student was updated successfully:", webhookError);
 		}
 
 		revalidatePath(`/${slug}/dashboard/students`);
@@ -147,30 +160,35 @@ export async function deleteStudentAction(fd: FormData) {
 		const slug = await getOrganizationSlugFromHeaders();
 		if (slug) revalidatePath(`/${slug}/dashboard/students`);
 
-		// Dispatch webhooks for student.deleted
+		// Try to dispatch webhooks for student.deleted (optional)
 		if (slug) {
-			const supabase = createServerActionClient({ cookies });
-			const { data: webhooks } = await supabase
-				.from("webhook_settings")
-				.select("url,bearer_token,json_body,event_type")
-				.eq("org_slug", slug)
-				.eq("event_type", "student.deleted");
+			try {
+				const supabase = createServerActionClient({ cookies });
+				const { data: webhooks } = await supabase
+					.from("webhook_settings")
+					.select("url,bearer_token,json_body,event_type")
+					.eq("org_slug", slug)
+					.eq("event_type", "student.deleted");
 
-			if (webhooks && Array.isArray(webhooks)) {
-				for (const webhook of webhooks) {
-					try {
-						await fetch(webhook.url, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
-							},
-							body: webhook.json_body || JSON.stringify({ event: "student.deleted", student_id: id })
-						});
-					} catch {
-						// Optionally log or handle webhook delivery errors
+				if (webhooks && Array.isArray(webhooks)) {
+					for (const webhook of webhooks) {
+						try {
+							await fetch(webhook.url, {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+									...(webhook.bearer_token ? { "Authorization": `Bearer ${webhook.bearer_token}` } : {})
+								},
+								body: webhook.json_body || JSON.stringify({ event: "student.deleted", student_id: id })
+							});
+						} catch {
+							// Silently handle webhook delivery errors
+						}
 					}
 				}
+			} catch (webhookError) {
+				// Silently handle webhook system errors
+				console.log("Webhook dispatch failed for delete, but student was deleted successfully:", webhookError);
 			}
 		}
 		return { success: true, message: "Student deleted successfully!" };
