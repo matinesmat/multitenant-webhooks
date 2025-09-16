@@ -9,7 +9,8 @@ const LIST_PATH = "/dashboard/organizations";
 export async function createOrganizationAction(fd: FormData) {
   try {
     const name = String(fd.get("name") ?? "").trim();
-    const slug = String(fd.get("slug") ?? "").trim(); // Require slug
+    const slug = String(fd.get("slug") ?? "").trim();
+    const owner_email = String(fd.get("owner_email") ?? "").trim();
 
     // Validation
     if (!name || !slug) {
@@ -42,8 +43,9 @@ export async function createOrganizationAction(fd: FormData) {
       .from("organizations")
       .insert({
         name,
-        slug, // Include slug
+        slug,
         owner_id: session.user.id,
+        owner_email: owner_email || null,
       })
       .select()
       .single();

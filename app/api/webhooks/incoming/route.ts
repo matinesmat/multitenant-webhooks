@@ -101,7 +101,6 @@ async function handleStudentData(data: any, organizationId: string, eventType: s
       email: data.email || null,
       status: data.status || 'active',
       org_id: organizationId,
-      org_slug: data.org_slug || data.organization_slug || null,
       external_id: data.external_id || data.id || null, // Store external system ID
       metadata: data.metadata || data.additional_data || null
     };

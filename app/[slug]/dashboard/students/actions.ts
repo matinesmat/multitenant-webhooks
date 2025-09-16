@@ -30,13 +30,33 @@ export async function createStudentAction(fd: FormData, slug?: string) {
 			return { success: false, error: "Organization not found" };
 		}
 
+		// Create the student record with only the essential fields
+		const studentData = {
+			first_name,
+			last_name,
+			email,
+			status,
+			org_id: org.id
+		};
+
+		console.log("Creating student with data:", studentData);
+
 		const { data, error } = await supabase
 			.from("students")
-			.insert({ first_name, last_name, email, status, org_id: org.id }) // Use the organization ID
+			.insert(studentData)
 			.select()
 			.single();
 
 		if (error) {
+			console.error("Student creation error:", {
+				error: error.message,
+				code: error.code,
+				details: error.details,
+				hint: error.hint,
+				studentData: studentData,
+				orgId: org.id,
+				slug: slug
+			});
 			return { success: false, error: `Failed to create student: ${error.message}` };
 		}
 
@@ -72,6 +92,7 @@ export async function createStudentAction(fd: FormData, slug?: string) {
 		revalidatePath(`/${slug}/dashboard/students`);
 		return { success: true, data, message: "Student created successfully!" };
 	} catch (error) {
+		console.error("Unexpected error in createStudentAction:", error);
 		return { success: false, error: `Error creating student: ${error}` };
 	}
 }

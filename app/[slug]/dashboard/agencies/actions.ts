@@ -34,10 +34,10 @@ export async function createAgencyAction(fd: FormData, slug?: string) {
 			.from("agencies")
 			.insert({ 
 				name, 
-				contact_email, 
-				contact_phone, 
-				address, 
-				organization_id: org.id 
+				email: contact_email, 
+				phone: contact_phone, 
+				metadata: address ? { address } : null, 
+				org_id: org.id 
 			})
 			.select()
 			.single();
@@ -69,7 +69,12 @@ export async function updateAgencyAction(fd: FormData, slug?: string) {
 
 		const { data, error } = await supabase
 			.from("agencies")
-			.update({ name, contact_email, contact_phone, address })
+			.update({ 
+				name, 
+				email: contact_email, 
+				phone: contact_phone, 
+				metadata: address ? { address } : null 
+			})
 			.eq("id", id)
 			.select()
 			.single();

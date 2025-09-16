@@ -1,21 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-type WebhookActivityLog = {
-  id: string;
-  webhook_id: string;
-  org_slug: string;
-  event_type: string;
-  table_name: string;
-  operation: string;
-  record_id?: string;
-  status: string;
-  response_status?: number;
-  response_body?: string;
-  error_message?: string;
-  created_at: string;
-  updated_at: string;
-};
+// Webhook logging removed
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,26 +46,7 @@ export async function POST(req: Request) {
 
     // Process each webhook setting
     for (const webhook of webhookSettings) {
-      let logEntry: WebhookActivityLog | null = null;
-      
       try {
-        // Log webhook activity
-        const { data: logEntryData } = await supabase
-          .from('webhook_activity_logs')
-          .insert({
-            webhook_id: webhook.id,
-            org_slug: orgSlug,
-            event_type: `${table}_${event}`,
-            table_name: table,
-            operation: event,
-            record_id: record?.id,
-            status: 'pending'
-          })
-          .select()
-          .single();
-
-        logEntry = logEntryData;
-
         // Send webhook
         const response = await fetch(webhook.url, {
           method: 'POST',
@@ -97,31 +64,9 @@ export async function POST(req: Request) {
           })
         });
 
-        // Update log entry with response
-        await supabase
-          .from('webhook_activity_logs')
-          .update({
-            status: response.ok ? 'success' : 'failed',
-            response_status: response.status,
-            response_body: await response.text().catch(() => ''),
-            error_message: response.ok ? null : `HTTP ${response.status}`
-          })
-          .eq('id', logEntry?.id);
-
         console.log(`✅ Webhook sent successfully to ${webhook.url}`);
       } catch (webhookError) {
         console.error(`❌ Error sending webhook to ${webhook.url}:`, webhookError);
-        
-        // Update log entry with error
-        if (logEntry?.id) {
-          await supabase
-            .from('webhook_activity_logs')
-            .update({
-              status: 'failed',
-              error_message: webhookError instanceof Error ? webhookError.message : 'Unknown error'
-            })
-            .eq('id', logEntry.id);
-        }
       }
     }
 

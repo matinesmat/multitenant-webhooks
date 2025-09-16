@@ -50,18 +50,29 @@ export async function createWebhookAction(fd: FormData, slug?: string) {
 
     const supabase = createServerActionClient({ cookies });
 
-    const insertRow = {
+    // Create insert row with only essential fields first
+    const insertRow: Record<string, any> = {
       name,
       url,
       org_slug: orgSlug,
       enabled,
       resources,
       events,
-      secret_key: secretKey,
       event_type: events.join(','), // Store events as comma-separated string for compatibility
-      bearer_token: null,
-      json_body: null
     };
+
+    // Add optional fields only if they have values
+    if (secretKey) {
+      insertRow.secret_key = secretKey;
+    }
+    
+    if (maxRetries > 0 && backoffMultiplier > 0) {
+      insertRow.retry_policy = {
+        max_retries: maxRetries,
+        backoff_multiplier: backoffMultiplier,
+        initial_delay: 1000
+      };
+    }
 
     const { data, error } = await supabase
       .from("webhook_settings")
@@ -70,6 +81,14 @@ export async function createWebhookAction(fd: FormData, slug?: string) {
       .single();
 
     if (error) {
+      console.error("Webhook creation error:", {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        insertData: insertRow,
+        orgSlug: orgSlug
+      });
       return { success: false, error: `Failed to create webhook: ${error.message}` };
     }
 
@@ -106,6 +125,15 @@ export async function updateWebhookAction(fd: FormData, slug?: string) {
     }
     if (secretKey !== null) update.secret_key = secretKey;
     update.enabled = enabled;
+    
+    // Only update retry_policy if we have valid values
+    if (maxRetries > 0 && backoffMultiplier > 0) {
+      update.retry_policy = {
+        max_retries: maxRetries,
+        backoff_multiplier: backoffMultiplier,
+        initial_delay: 1000
+      };
+    }
 
     if (Object.keys(update).length === 0) {
       return { success: false, error: "No valid updates provided" };
@@ -113,7 +141,19 @@ export async function updateWebhookAction(fd: FormData, slug?: string) {
 
     const supabase = createServerActionClient({ cookies });
 
-    const { data, error } = await supabase
+    // First, let's get the existing webhook to ensure it exists and belongs to the org
+    const { data: existingWebhook, error: fetchError } = await supabase
+      .from("webhook_settings")
+      .select("id, org_slug")
+      .eq("id", id)
+      .eq("org_slug", orgSlug)
+      .single();
+
+    if (fetchError || !existingWebhook) {
+      return { success: false, error: "Webhook not found or access denied" };
+    }
+
+    let { data, error } = await supabase
       .from("webhook_settings")
       .update(update)
       .eq("id", id)
@@ -121,7 +161,45 @@ export async function updateWebhookAction(fd: FormData, slug?: string) {
       .select()
       .single();
 
-    if (error) {
+    // If the update failed and it might be due to retry_policy, try without it
+    if (error && update.retry_policy) {
+      console.log("First update failed, trying without retry_policy:", error.message);
+      const updateWithoutRetry = { ...update };
+      delete updateWithoutRetry.retry_policy;
+      
+      const retryResult = await supabase
+        .from("webhook_settings")
+        .update(updateWithoutRetry)
+        .eq("id", id)
+        .eq("org_slug", orgSlug)
+        .select()
+        .single();
+        
+      if (retryResult.error) {
+        console.error("Webhook update error (retry):", {
+          error: retryResult.error.message,
+          code: retryResult.error.code,
+          details: retryResult.error.details,
+          hint: retryResult.error.hint,
+          updateData: updateWithoutRetry,
+          webhookId: id,
+          orgSlug: orgSlug
+        });
+        return { success: false, error: `Failed to update webhook: ${retryResult.error.message}` };
+      }
+      
+      data = retryResult.data;
+      error = null;
+    } else if (error) {
+      console.error("Webhook update error:", {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        updateData: update,
+        webhookId: id,
+        orgSlug: orgSlug
+      });
       return { success: false, error: `Failed to update webhook: ${error.message}` };
     }
 
@@ -208,24 +286,7 @@ export async function testWebhookAction(fd: FormData, slug?: string) {
 
     const responseBody = await response.text();
 
-    // Log the test attempt
-    await supabase
-      .from('webhooks_log')
-      .insert({
-        webhook_id: webhook.id,
-        organization_id: webhook.org_slug,
-        event_type: 'test_webhook',
-        table_name: 'test',
-        operation: 'TEST',
-        record_id: 'test-123',
-        payload: testPayload,
-        endpoint_url: testUrl || webhook.url,
-        status: response.ok ? 'delivered' : 'failed',
-        response_status: response.status,
-        response_body: responseBody,
-        error_message: response.ok ? null : `HTTP ${response.status}`,
-        delivered_at: response.ok ? new Date().toISOString() : null
-      });
+    // Webhook logging removed
 
     return { 
       success: response.ok, 

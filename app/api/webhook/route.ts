@@ -2,6 +2,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+//TODO: when a request is made to this route, get the appropriate webhook setting of he organization inquestion
+// and push the information to the url of that webhook setting
+// you may find the structure of the db from supabase.ts
+
+// {project_url}/api/webhook
+
+
+
 // Initialize Supabase client with service role key for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +23,6 @@ type WebhookPayload = {
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
   record: Record<string, unknown>;
   old_record?: Record<string, unknown>;
-  org_slug?: string;
   timestamp?: string;
   source?: string;
 };
@@ -38,23 +45,7 @@ type WebhookSettings = {
   };
 };
 
-type WebhookActivityLog = {
-  id: string;
-  webhook_id: string;
-  org_slug: string;
-  event_type: string;
-  table_name: string;
-  operation: string;
-  record_id?: string;
-  status: 'pending' | 'success' | 'failed' | 'retrying';
-  response_status?: number;
-  response_body?: string;
-  error_message?: string;
-  retry_count?: number;
-  max_retries?: number;
-  created_at: string;
-  updated_at: string;
-};
+// Webhook logging removed
 
 export async function POST(
   req: NextRequest,
@@ -67,7 +58,6 @@ export async function POST(
     console.log(`📥 Incoming webhook for ${table}/${recordid}:`, {
       event: body.event,
       operation: body.operation,
-      org_slug: body.org_slug,
       source: body.source
     });
 
@@ -79,11 +69,8 @@ export async function POST(
       );
     }
 
-    // Extract organization slug from various possible sources
-    const orgSlug = body.org_slug || 
-                   (typeof body.record?.org_slug === 'string' ? body.record.org_slug : null) || 
-                   (typeof body.record?.organization_id === 'string' ? body.record.organization_id : null) ||
-                   await getOrgSlugFromRecord(table, body.record);
+    // Extract organization slug from the record since payload no longer includes org_slug
+    const orgSlug = await getOrgSlugFromRecord(table, body.record);
 
     if (!orgSlug) {
       console.log("No organization slug found, skipping webhook processing");
@@ -159,31 +146,7 @@ async function processWebhook(
   payload: WebhookPayload, 
   orgSlug: string
 ): Promise<{ webhook_id: string; status: string }> {
-  let logEntry: WebhookActivityLog | null = null;
-  
   try {
-    // Create webhook activity log entry
-    const { data: logEntryData, error: logError } = await supabaseAdmin
-      .from('webhook_activity_logs')
-      .insert({
-        webhook_id: webhook.id,
-        org_slug: orgSlug,
-        event_type: payload.event,
-        table_name: payload.table,
-        operation: payload.operation,
-        record_id: payload.record?.id,
-        status: 'pending',
-        retry_count: 0,
-        max_retries: webhook.retry_policy?.max_retries || 3
-      })
-      .select()
-      .single();
-
-    if (logError) {
-      throw new Error(`Failed to create log entry: ${logError.message}`);
-    }
-
-    logEntry = logEntryData;
 
     // Prepare webhook payload
     const webhookPayload = webhook.json_body ? 
@@ -212,19 +175,7 @@ async function processWebhook(
       signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
-    // Update log entry with response
-    if (logEntry?.id) {
-      await supabaseAdmin
-        .from('webhook_activity_logs')
-        .update({
-          status: response.ok ? 'success' : 'failed',
-          response_status: response.status,
-          response_body: await response.text().catch(() => ''),
-          error_message: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', logEntry.id);
-    }
+    // Webhook logging removed
 
     if (response.ok) {
       console.log(`✅ Webhook sent successfully to ${webhook.url}`);
@@ -236,52 +187,55 @@ async function processWebhook(
 
   } catch (error) {
     console.error(`❌ Error sending webhook to ${webhook.url}:`, error);
-    
-    // Update log entry with error
-    if (logEntry?.id) {
-      await supabaseAdmin
-        .from('webhook_activity_logs')
-        .update({
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Unknown error',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', logEntry.id);
-    }
-
     return { webhook_id: webhook.id, status: 'error' };
   }
 }
 
 async function getOrgSlugFromRecord(table: string, record: Record<string, unknown>): Promise<string | null> {
   try {
-    // Try to get org_slug from the record directly
+    // Try to get org_slug from the record directly (for tables that have this field)
     if (record.org_slug && typeof record.org_slug === 'string') {
       return record.org_slug;
     }
 
-    // If record has org_id, look up the organization
+    // If record has org_id, look up the organization slug
     if (record.org_id && typeof record.org_id === 'string') {
-      const { data: org } = await supabaseAdmin
+      const { data: org, error } = await supabaseAdmin
         .from('organizations')
         .select('slug')
         .eq('id', record.org_id)
         .single();
       
-      return org?.slug || null;
-    }
-
-    // For students table, try to get org_slug from org_id
-    if (table === 'students' && record.org_id && typeof record.org_id === 'string') {
-      const { data: org } = await supabaseAdmin
-        .from('organizations')
-        .select('slug')
-        .eq('id', record.org_id)
-        .single();
+      if (error) {
+        console.error('Error looking up organization:', error);
+        return null;
+      }
       
       return org?.slug || null;
     }
 
+    // For organizations table, use the slug field directly
+    if (table === 'organizations' && record.slug && typeof record.slug === 'string') {
+      return record.slug;
+    }
+
+    // Try alternative organization ID fields
+    const orgIdFields = ['organization_id', 'orgId', 'organizationId'];
+    for (const field of orgIdFields) {
+      if (record[field] && typeof record[field] === 'string') {
+        const { data: org, error } = await supabaseAdmin
+          .from('organizations')
+          .select('slug')
+          .eq('id', record[field])
+          .single();
+        
+        if (!error && org?.slug) {
+          return org.slug;
+        }
+      }
+    }
+
+    console.log(`No organization slug found for table ${table} with record:`, record);
     return null;
   } catch (error) {
     console.error('Error getting org slug from record:', error);
@@ -297,23 +251,12 @@ export async function GET(
   try {
     const { table, recordid } = params;
     
-    // Get webhook activity logs for this record
-    const { data: logs, error } = await supabaseAdmin
-      .from('webhook_activity_logs')
-      .select('*')
-      .eq('table_name', table)
-      .eq('record_id', recordid)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to fetch webhook logs: ${error.message}`);
-    }
-
+    // Webhook logging removed - return basic status
     return NextResponse.json({
       success: true,
       table,
       record_id: recordid,
-      webhook_logs: logs || []
+      message: "Webhook logging has been removed"
     });
 
   } catch (error) {

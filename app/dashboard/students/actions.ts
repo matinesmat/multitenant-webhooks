@@ -20,7 +20,7 @@ export async function createStudentAction(fd: FormData) {
     const supabase = createServerActionClient({ cookies });
     const { data: org } = await supabase
       .from("organizations")
-      .select("slug")
+      .select("id")
       .eq("slug", org_slug)
       .single();
 
@@ -32,7 +32,7 @@ export async function createStudentAction(fd: FormData) {
       first_name,
       last_name,
       email,
-      org_slug, // Use slug
+      org_id: org.id, // Use organization ID instead of slug
     }).select().single();
 
     if (error) {

@@ -249,9 +249,11 @@ export type Database = {
           id: string
           json_body: string | null
           name: string | null
-          org_id: string
+          org_id: string | null
           org_slug: string | null
           resources: string[]
+          retry_policy: Json | null
+          secret_key: string | null
           updated_at: string
           url: string
         }
@@ -264,9 +266,11 @@ export type Database = {
           id?: string
           json_body?: string | null
           name?: string | null
-          org_id: string
+          org_id?: string | null
           org_slug?: string | null
           resources?: string[]
+          retry_policy?: Json | null
+          secret_key?: string | null
           updated_at?: string
           url: string
         }
@@ -279,9 +283,11 @@ export type Database = {
           id?: string
           json_body?: string | null
           name?: string | null
-          org_id?: string
+          org_id?: string | null
           org_slug?: string | null
           resources?: string[]
+          retry_policy?: Json | null
+          secret_key?: string | null
           updated_at?: string
           url?: string
         }

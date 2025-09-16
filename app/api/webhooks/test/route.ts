@@ -70,24 +70,7 @@ export async function POST(request: NextRequest) {
 
     const responseBody = await response.text();
 
-    // Log the test attempt
-    await supabase
-      .from('webhooks_log')
-      .insert({
-        webhook_id: webhook.id,
-        organization_id: webhook.org_slug,
-        event_type: 'test_webhook',
-        table_name: 'test',
-        operation: 'TEST',
-        record_id: 'test-123',
-        payload: testPayload,
-        endpoint_url: url || webhook.url,
-        status: response.ok ? 'delivered' : 'failed',
-        response_status: response.status,
-        response_body: responseBody,
-        error_message: response.ok ? null : `HTTP ${response.status}`,
-        delivered_at: response.ok ? new Date().toISOString() : null
-      });
+    // Webhook logging removed
 
     return NextResponse.json({
       success: response.ok,

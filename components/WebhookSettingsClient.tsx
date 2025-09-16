@@ -272,13 +272,21 @@ export default function WebhookSettingsClient({ webhooks, organizationName, slug
         ))}
       </div>
 
-      {/* Webhooks List */}
+      {/* Add Webhook Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleCreate}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Webhook
+        </button>
+      </div>
+
+      {/* Webhooks List - Show single webhook configuration */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Configured Webhooks</h2>
-        </div>
-        
-        {webhooks.length > 0 && webhooks.map((webhook) => (
+        {webhooks.length > 0 ? (
+          webhooks.map((webhook) => (
             <div key={webhook.id} className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -357,7 +365,21 @@ export default function WebhookSettingsClient({ webhooks, organizationName, slug
                 </div>
               </div>
             </div>
-          ))}
+          ))
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No webhooks configured</h3>
+            <p className="text-gray-600 mb-4">Get started by creating your first webhook configuration.</p>
+            <button
+              onClick={handleCreate}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+            >
+              <Plus className="w-4 h-4" />
+              Add Webhook
+            </button>
+          </div>
+        )}
       </div>
 
 
@@ -371,7 +393,7 @@ export default function WebhookSettingsClient({ webhooks, organizationName, slug
               <button 
                 onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  formData.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                  formData.enabled ? 'bg-gray-800' : 'bg-gray-300'
                 }`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -495,7 +517,7 @@ export default function WebhookSettingsClient({ webhooks, organizationName, slug
                 })}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               >
-                Reset
+                Cancel
               </button>
               <button 
                 type="submit"

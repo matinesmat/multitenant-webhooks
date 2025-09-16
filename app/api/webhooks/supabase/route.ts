@@ -57,24 +57,7 @@ async function enqueueWebhookDelivery(
   const body = JSON.stringify(webhookPayload);
   const signature = generateHmacSignature(body, webhook.secret_key);
 
-  // Log the webhook attempt
-  const { data: logEntry } = await supabase
-    .from('webhooks_log')
-    .insert({
-      webhook_id: webhook.id,
-      organization_id: organizationId,
-      event_type: `${payload.table}_${payload.event}`,
-      table_name: payload.table,
-      operation: payload.event,
-      record_id: payload.record?.id,
-      payload: webhookPayload,
-      endpoint_url: webhook.url,
-      status: 'pending',
-      retry_count: 0,
-      max_retries: webhook.retry_policy.max_retries
-    })
-    .select()
-    .single();
+  // Webhook logging removed
 
   // Attempt delivery
   try {
@@ -92,31 +75,13 @@ async function enqueueWebhookDelivery(
     const responseBody = await response.text();
 
     // Update log with result
-    await supabase
-      .from('webhooks_log')
-      .update({
-        status: response.ok ? 'delivered' : 'failed',
-        response_status: response.status,
-        response_body: responseBody,
-        error_message: response.ok ? null : `HTTP ${response.status}`,
-        delivered_at: response.ok ? new Date().toISOString() : null,
-        next_retry_at: response.ok ? null : new Date(Date.now() + webhook.retry_policy.initial_delay).toISOString()
-      })
-      .eq('id', logEntry?.id);
+    // Webhook logging removed
 
     console.log(`✅ Webhook delivered to ${webhook.url}: ${response.status}`);
   } catch (error) {
     console.error(`❌ Webhook delivery failed to ${webhook.url}:`, error);
     
-    // Update log with error
-    await supabase
-      .from('webhooks_log')
-      .update({
-        status: 'failed',
-        error_message: error instanceof Error ? error.message : 'Unknown error',
-        next_retry_at: new Date(Date.now() + webhook.retry_policy.initial_delay).toISOString()
-      })
-      .eq('id', logEntry?.id);
+    // Webhook logging removed
   }
 }
 

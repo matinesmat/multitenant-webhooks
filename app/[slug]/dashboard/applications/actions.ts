@@ -9,8 +9,10 @@ export async function createApplicationAction(fd: FormData, slug?: string) {
 	try {
 		const student_id = String(fd.get("student_id") ?? "").trim();
 		const agency_id = String(fd.get("agency_id") ?? "").trim();
-		const status = String(fd.get("status") ?? "pending").trim();
+		const status = String(fd.get("status") ?? "draft").trim();
 		const notes = String(fd.get("notes") ?? "").trim();
+		const position = String(fd.get("position") ?? "").trim();
+		const company = String(fd.get("company") ?? "").trim();
 		const orgId = slug || getOrganizationSlugFromHeaders();
 
 		if (!student_id || !agency_id || !orgId) {
@@ -30,6 +32,11 @@ export async function createApplicationAction(fd: FormData, slug?: string) {
 			return { success: false, error: "Organization not found" };
 		}
 
+		// Prepare metadata
+		const metadata: any = {};
+		if (position) metadata.position = position;
+		if (company) metadata.company = company;
+
 		const { data, error } = await supabase
 			.from("applications")
 			.insert({ 
@@ -37,7 +44,8 @@ export async function createApplicationAction(fd: FormData, slug?: string) {
 				agency_id, 
 				status, 
 				notes, 
-				organization_id: org.id 
+				metadata: Object.keys(metadata).length > 0 ? metadata : null,
+				org_id: org.id 
 			})
 			.select()
 			.single();
@@ -58,8 +66,10 @@ export async function updateApplicationAction(fd: FormData, slug?: string) {
 		const id = String(fd.get("id") ?? "").trim();
 		const student_id = String(fd.get("student_id") ?? "").trim();
 		const agency_id = String(fd.get("agency_id") ?? "").trim();
-		const status = String(fd.get("status") ?? "pending").trim();
+		const status = String(fd.get("status") ?? "draft").trim();
 		const notes = String(fd.get("notes") ?? "").trim();
+		const position = String(fd.get("position") ?? "").trim();
+		const company = String(fd.get("company") ?? "").trim();
 
 		if (!id || !student_id || !agency_id) {
 			return { success: false, error: "Required fields missing" };
@@ -67,9 +77,26 @@ export async function updateApplicationAction(fd: FormData, slug?: string) {
 
 		const supabase = createServerActionClient({ cookies });
 
+		// Prepare metadata
+		const metadata: any = {};
+		if (position) metadata.position = position;
+		if (company) metadata.company = company;
+
+		const updateData: any = { 
+			student_id, 
+			agency_id, 
+			status, 
+			notes 
+		};
+
+		// Only include metadata if there's data to store
+		if (Object.keys(metadata).length > 0) {
+			updateData.metadata = metadata;
+		}
+
 		const { data, error } = await supabase
 			.from("applications")
-			.update({ student_id, agency_id, status, notes })
+			.update(updateData)
 			.eq("id", id)
 			.select()
 			.single();

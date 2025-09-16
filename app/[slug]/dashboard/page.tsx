@@ -35,7 +35,7 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
     const { count: studentCount } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true })
-        .eq('org_slug', orgSlug);
+        .eq('org_id', organization?.id);
 
     // Get application count
     const { count: applicationCount } = await supabase
@@ -47,19 +47,19 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
     const { count: agenciesCount } = await supabase
         .from('agencies')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organization?.id);
+        .eq('org_id', organization?.id);
 
     // Get webhook settings count
     const { count: webhookCount } = await supabase
         .from('webhook_settings')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organization?.id);
+        .eq('org_id', organization?.id);
 
     // Get recent students for activity log
     const { data: recentStudents } = await supabase
         .from('students')
         .select('first_name, last_name, created_at')
-        .eq('org_slug', orgSlug)
+        .eq('org_id', organization?.id)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -71,6 +71,14 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
         .order('created_at', { ascending: false })
         .limit(5);
 
+    // Get recent agencies for activity log
+    const { data: recentAgencies } = await supabase
+        .from('agencies')
+        .select('name, created_at')
+        .eq('org_id', organization?.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
     // Calculate previous period counts for percentage changes
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -78,7 +86,7 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
     const { count: previousStudentCount } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true })
-        .eq('org_slug', orgSlug)
+        .eq('org_id', organization?.id)
         .lt('created_at', thirtyDaysAgo.toISOString());
 
     const { count: previousApplicationCount } = await supabase
@@ -94,41 +102,14 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
     const applicationChange = previousApplicationCount ? 
         Math.round(((applicationCount || 0) - previousApplicationCount) / previousApplicationCount * 100) : 0;
 
-    // Get webhook activity data
-    const { data: webhookLogs } = await supabase
-        .from('webhook_activity_logs')
-        .select('status, created_at')
-        .eq('org_slug', orgSlug)
-        .gte('created_at', thirtyDaysAgo.toISOString());
+    // Webhook logging removed
+    const totalWebhookCalls = 0;
+    const successfulWebhookCalls = 0;
+    const webhookSuccessRate = 0;
+    const webhookSuccessChange = 0;
 
-    // Calculate webhook success rate
-    const totalWebhookCalls = webhookLogs?.length || 0;
-    const successfulWebhookCalls = webhookLogs?.filter(log => log.status === 'success').length || 0;
-    const webhookSuccessRate = totalWebhookCalls > 0 ? 
-        Math.round((successfulWebhookCalls / totalWebhookCalls) * 100 * 10) / 10 : 0;
-
-    // Calculate previous period webhook success rate
-    const { data: previousWebhookLogs } = await supabase
-        .from('webhook_activity_logs')
-        .select('status')
-        .eq('org_slug', orgSlug)
-        .lt('created_at', thirtyDaysAgo.toISOString());
-
-    const previousTotalWebhookCalls = previousWebhookLogs?.length || 0;
-    const previousSuccessfulWebhookCalls = previousWebhookLogs?.filter(log => log.status === 'success').length || 0;
-    const previousWebhookSuccessRate = previousTotalWebhookCalls > 0 ? 
-        Math.round((previousSuccessfulWebhookCalls / previousTotalWebhookCalls) * 100 * 10) / 10 : 0;
-
-    const webhookSuccessChange = previousWebhookSuccessRate > 0 ? 
-        Math.round((webhookSuccessRate - previousWebhookSuccessRate) * 10) / 10 : 0;
-
-    // Get recent webhook activity for events
-    const { data: recentWebhookActivity } = await supabase
-        .from('webhook_activity_logs')
-        .select('event_type, table_name, operation, status, created_at')
-        .eq('org_slug', orgSlug)
-        .order('created_at', { ascending: false })
-        .limit(5);
+    // Webhook logging removed
+    const recentWebhookActivity = [];
 
     return (
 		<div className="space-y-6">
@@ -325,6 +306,25 @@ export default async function OrgScopedDashboard(props: { params: Promise<{ slug
 									</div>
 									<p className="text-xs text-gray-400">
 										{student.created_at ? new Date(student.created_at).toLocaleDateString() : 'Recently'}
+									</p>
+								</div>
+							))
+						) : recentAgencies && recentAgencies.length > 0 ? (
+							recentAgencies.map((agency, index) => (
+								<div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+									<div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+										<svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+											<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+										</svg>
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium text-gray-900">
+											Agency: {agency.name}
+										</p>
+										<p className="text-xs text-gray-500">{organization?.name || 'Organization'}</p>
+									</div>
+									<p className="text-xs text-gray-400">
+										{agency.created_at ? new Date(agency.created_at).toLocaleDateString() : 'Recently'}
 									</p>
 								</div>
 							))
